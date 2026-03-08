@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="thriftlm-url" content="http://localhost:8000" />
+  <title>ThriftLM // Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0a0a;
+      --bg-card:   #0f0f0f;
+      --bg-input:  #111111;
+      --border:    #1e1e1e;
+      --border-hi: #2a2a2a;
+      --green:     #00ff9d;
+      --green-dim: #00c977;
+      --red:       #ff3b3b;
+      --amber:     #f5a623;
+      --text:      #c8c8c8;
+      --text-dim:  #555;
+      --text-hi:   #f0f0f0;
+      --mono:      'JetBrains Mono', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.07) 2px,
+        rgba(0,0,0,0.07) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* noise overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.025;
+      pointer-events: none;
+      z-index: 9998;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem 1.75rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.85rem;
+      margin-bottom: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .wordmark {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .wordmark-logo {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-hi);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .wordmark-sub {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      transition: color 0.3s;
+    }
+    .status-pill.live    { color: var(--green); }
+    .status-pill.offline { color: var(--red); }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .status-pill.live .status-dot {
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.35; }
+    }
+
+    .last-updated {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+    }
+
+    /* ── api key row ── */
+    .key-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+      align-items: stretch;
+      flex-shrink: 0;
+    }
+
+    .key-prefix {
+      display: flex;
+      align-items: center;
+      padding: 0 0.75rem;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-right: none;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      user-select: none;
+    }
+
+    #api-key-input {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-hi);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      padding: 0.55rem 0.75rem;
+      outline: none;
+      transition: border-color 0.2s;
+      min-width: 0;
+    }
+    #api-key-input::placeholder { color: var(--text-dim); }
+    #api-key-input:focus { border-color: var(--border-hi); }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border-hi);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.55rem 1.25rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+      white-space: nowrap;
+    }
+    .btn:hover {
+      border-color: var(--green-dim);
+      color: var(--green);
+    }
+    .btn.primary {
+      border-color: var(--green-dim);
+      color: var(--green);
+    }
+    .btn.primary:hover {
+      background: rgba(0,255,157,0.06);
+    }
+
+    /* ── stat cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 1px;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 760px) {
+      .cards { grid-template-columns: repeat(2, 1fr); }
+      .viz-row { grid-template-columns: 1fr !important; }
+    }
+
+    .card {
+      background: var(--bg-card);
+      padding: 2rem 1.6rem 1.6rem;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.15s;
+    }
+    .card:hover { background: #111; }
+
+    .card-accent {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--border-hi);
+      transition: background 0.4s, box-shadow 0.4s;
+    }
+    .card.updated .card-accent {
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green);
+    }
+
+    .card-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 1.2rem;
+    }
+
+    .card-value {
+      font-size: 3.2rem;
+      font-weight: 700;
+      color: var(--text-hi);
+      line-height: 1;
+      letter-spacing: -0.03em;
+      transition: color 0.3s;
+      min-height: 3.2rem;
+    }
+    .card-value.flash { color: var(--green); }
+
+    .card-unit {
+      display: inline-block;
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: var(--text-dim);
+      margin-left: 0.2rem;
+      vertical-align: bottom;
+      padding-bottom: 0.4rem;
+    }
+
+    .card-sub {
+      margin-top: 0.9rem;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+
+    .card-value.empty { color: var(--text-dim); }
+
+    .hit-bar-track {
+      margin-top: 1rem;
+      height: 3px;
+      background: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .hit-bar-fill {
+      position: absolute;
+      inset: 0 100% 0 0;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      transition: right 0.8s cubic-bezier(0.16,1,0.3,1);
+    }
+
+    /* ── bottom bar ── */
+    .bottom-bar {
+      border: 1px solid var(--border);
+      border-top: none;
+      padding: 0.45rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card);
+      flex-shrink: 0;
+    }
+
+    .bottom-left {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .ticker {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+    .ticker span { color: var(--text); }
+
+    .countdown-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .countdown-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .countdown-track {
+      width: 80px;
+      height: 2px;
+      background: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .countdown-fill {
+      position: absolute;
+      inset: 0;
+      background: var(--border-hi);
+      transform-origin: left;
+      transform: scaleX(1);
+    }
+
+    /* ── viz row ── */
+    .viz-row {
+      display: grid;
+      grid-template-columns: 2fr 2fr 3fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-top: none;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .viz-panel {
+      background: var(--bg-card);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .viz-panel:hover { background: #101010; }
+
+    .viz-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .viz-title {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .viz-badge {
+      font-size: 0.55rem;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      border: 1px solid var(--border-hi);
+      padding: 0.1rem 0.4rem;
+      text-transform: uppercase;
+    }
+
+    .viz-body {
+      flex: 1;
+      padding: 0.75rem 1rem 1rem;
+      min-height: 0;
+      position: relative;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── top queries table ── */
+    .tq-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.7rem;
+    }
+    .tq-table thead tr {
+      border-bottom: 1px solid var(--border-hi);
+    }
+    .tq-table th {
+      text-align: left;
+      color: var(--text-dim);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-size: 0.6rem;
+      padding: 0 0 0.5rem 0;
+    }
+    .tq-table th:not(:first-child) { text-align: right; }
+    .tq-table td {
+      padding: 0.45rem 0 0.45rem 0;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      vertical-align: middle;
+    }
+    .tq-table td:not(:first-child) { text-align: right; color: var(--text-dim); }
+    .tq-table tr:last-child td { border-bottom: none; }
+    .tq-table .td-query {
+      color: var(--text-hi);
+      max-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tq-table .td-hits { color: var(--green); font-weight: 700; }
+    .tq-table .td-time { font-size: 0.6rem; }
+
+    .tq-empty {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      padding-top: 0.75rem;
+    }
+
+    /* ── notice ── */
+    .notice {
+      margin-top: 0.75rem;
+      border: 1px solid var(--border);
+      padding: 0.6rem 1rem;
+      font-size: 0.75rem;
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+    .notice.error   { border-color: var(--red);      color: var(--red); }
+    .notice.warn    { border-color: var(--amber);     color: var(--amber); }
+    .notice.info    { border-color: var(--border-hi); color: var(--text-dim); }
+    .notice.visible { display: flex; }
+    .notice-code    { opacity: 0.6; font-size: 0.65rem; }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="wordmark">
+      <span class="wordmark-logo">ThriftLM</span>
+      <span class="wordmark-sub">// cache monitor</span>
+    </div>
+    <div class="header-right">
+      <span class="last-updated" id="last-updated">--:--:--</span>
+      <div class="status-pill" id="status-pill">
+        <div class="status-dot"></div>
+        <span id="status-text">WAITING</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="key-row">
+    <div class="key-prefix">API KEY</div>
+    <input
+      id="api-key-input"
+      type="text"
+      placeholder="sc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <button class="btn primary" id="connect-btn">CONNECT</button>
+    <button class="btn" id="refresh-btn" title="Refresh now">&#8635;</button>
+  </div>
+
+  <div class="cards">
+    <div class="card" id="card-hit-rate">
+      <div class="card-accent"></div>
+      <div class="card-label">Hit Rate</div>
+      <div class="card-value empty" id="val-hit-rate">—<span class="card-unit">%</span></div>
+      <div class="hit-bar-track"><div class="hit-bar-fill" id="hit-bar" style="right:100%"></div></div>
+      <div class="card-sub" id="sub-hit-rate">&nbsp;</div>
+    </div>
+    <div class="card" id="card-total-queries">
+      <div class="card-accent"></div>
+      <div class="card-label">Total Queries</div>
+      <div class="card-value empty" id="val-total-queries">—</div>
+      <div class="card-sub" id="sub-total-queries">&nbsp;</div>
+    </div>
+    <div class="card" id="card-tokens-saved">
+      <div class="card-accent"></div>
+      <div class="card-label">Tokens Saved</div>
+      <div class="card-value empty" id="val-tokens-saved">—</div>
+      <div class="card-sub" id="sub-tokens-saved">&nbsp;</div>
+    </div>
+    <div class="card" id="card-cost-saved">
+      <div class="card-accent"></div>
+      <div class="card-label">Cost Saved</div>
+      <div class="card-value empty" id="val-cost-saved"><span class="card-unit" style="margin-left:0;margin-right:1px">$</span>—</div>
+      <div class="card-sub" id="sub-cost-saved">&nbsp;</div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="bottom-left">
+      <span class="ticker">ENDPOINT <span id="ticker-url">—</span></span>
+      <span class="ticker">KEY <span id="ticker-key">—</span></span>
+    </div>
+    <div class="countdown-bar-wrap">
+      <span class="countdown-label">NEXT REFRESH</span>
+      <div class="countdown-track">
+        <div class="countdown-fill" id="countdown-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- visualizations -->
+  <div class="viz-row">
+
+    <div class="viz-panel">
+      <div class="viz-header">
+        <span class="viz-title">Hit Rate Over Time</span>
+        <span class="viz-badge">24H</span>
+      </div>
+      <div class="viz-body">
+        <canvas id="chart-hitrate"></canvas>
+      </div>
+    </div>
+
+    <div class="viz-panel">
+      <div class="viz-header">
+        <span class="viz-title">Queries Per Hour</span>
+        <span class="viz-badge">12H</span>
+      </div>
+      <div class="viz-body">
+        <canvas id="chart-queries"></canvas>
+      </div>
+    </div>
+
+    <div class="viz-panel">
+      <div class="viz-header">
+        <span class="viz-title">Top Cached Queries</span>
+        <span class="viz-badge">TOP 5</span>
+      </div>
+      <div class="viz-body" id="tq-body">
+        <table class="tq-table" id="tq-table">
+          <thead>
+            <tr>
+              <th style="width:60%">Query</th>
+              <th style="width:15%">Hits</th>
+              <th style="width:25%">Last Hit</th>
+            </tr>
+          </thead>
+          <tbody id="tq-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="notice" id="notice">
+    <span id="notice-msg"></span>
+    <span class="notice-code" id="notice-code"></span>
+  </div>
+
+</div>
+
+<script>
+(() => {
+  const REFRESH_MS = 30_000;
+  const $ = id => document.getElementById(id);
+
+  const metaUrl = document.querySelector('meta[name="thriftlm-url"]');
+  const BASE_URL = (metaUrl?.content || 'http://localhost:8000').replace(/\/$/, '');
+
+  let apiKey = '';
+  let refreshTimer = null;
+  let countdownRaf = null;
+  let prevData = null;
+
+  // ── mock data (shown before connecting) ────────────────────────
+  function genMockHitRate() {
+    // 24 hourly points, trending upward with noise
+    const pts = [];
+    let base = 0.28;
+    for (let i = 0; i < 24; i++) {
+      base = Math.min(0.92, base + (Math.random() * 0.06 - 0.01));
+      pts.push(parseFloat(base.toFixed(3)));
+    }
+    return pts;
+  }
+
+  function genMockQPH() {
+    // 12 hourly bars, business-hours shape
+    const shape = [12,8,6,15,42,87,134,119,98,76,54,31];
+    return shape.map(v => v + Math.floor(Math.random() * 8 - 4));
+  }
+
+  function genMockTopQueries() {
+    return [
+      { query: 'What is the refund policy?',             hits: 214, last_hit: '2m ago' },
+      { query: 'How do I reset my password?',            hits: 187, last_hit: '4m ago' },
+      { query: 'Can I cancel my subscription anytime?',  hits: 143, last_hit: '11m ago' },
+      { query: 'What payment methods do you accept?',    hits: 98,  last_hit: '23m ago' },
+      { query: 'How long does shipping take?',           hits: 71,  last_hit: '41m ago' },
+    ];
+  }
+
+  // chart state (populated from mock or live data)
+  let chartHitRate  = genMockHitRate();
+  let chartQPH      = genMockQPH();
+  let chartTopQ     = genMockTopQueries();
+
+  // ── canvas utils ───────────────────────────────────────────────
+  const GREEN      = '#00ff9d';
+  const GREEN_DIM  = 'rgba(0,255,157,0.12)';
+  const BORDER_COL = '#1e1e1e';
+  const TEXT_DIM   = '#555';
+  const TEXT_COL   = '#888';
+
+  function dpr() { return window.devicePixelRatio || 1; }
+
+  function sizeCanvas(canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const d = dpr();
+    canvas.width  = Math.round(rect.width  * d);
+    canvas.height = Math.round(rect.height * d);
+    const ctx = canvas.getContext('2d');
+    ctx.scale(d, d);
+    return [ctx, rect.width, rect.height];
+  }
+
+  // ── line chart ─────────────────────────────────────────────────
+  function drawLineChart(canvas, points) {
+    if (!canvas.getBoundingClientRect().width) return;
+    const [ctx, W, H] = sizeCanvas(canvas);
+    ctx.clearRect(0, 0, W, H);
+
+    const PAD = { top: 16, right: 12, bottom: 28, left: 36 };
+    const cW = W - PAD.left - PAD.right;
+    const cH = H - PAD.top  - PAD.bottom;
+
+    const min = 0, max = 1;
+    const xStep = cW / (points.length - 1);
+
+    // y gridlines + labels (0%, 25%, 50%, 75%, 100%)
+    ctx.font = `500 9px 'JetBrains Mono', monospace`;
+    ctx.fillStyle = TEXT_DIM;
+    ctx.textAlign = 'right';
+    [0, 0.25, 0.5, 0.75, 1].forEach(pct => {
+      const y = PAD.top + cH - pct * cH;
+      ctx.strokeStyle = BORDER_COL;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(PAD.left, y);
+      ctx.lineTo(PAD.left + cW, y);
+      ctx.stroke();
+      ctx.fillText(Math.round(pct * 100) + '%', PAD.left - 5, y + 3);
+    });
+
+    // x-axis hour labels — every 4h
+    ctx.textAlign = 'center';
+    ctx.fillStyle = TEXT_DIM;
+    const now = new Date();
+    for (let i = 0; i < points.length; i += 4) {
+      const h = (now.getHours() - (points.length - 1 - i) + 48) % 24;
+      const x = PAD.left + i * xStep;
+      ctx.fillText(String(h).padStart(2,'0'), x, H - 6);
+    }
+
+    // fill under line
+    const toX = i => PAD.left + i * xStep;
+    const toY = v => PAD.top + cH - (v - min) / (max - min) * cH;
+
+    const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + cH);
+    grad.addColorStop(0, 'rgba(0,255,157,0.18)');
+    grad.addColorStop(1, 'rgba(0,255,157,0)');
+
+    ctx.beginPath();
+    ctx.moveTo(toX(0), toY(points[0]));
+    for (let i = 1; i < points.length; i++) {
+      const cx = (toX(i-1) + toX(i)) / 2;
+      ctx.bezierCurveTo(cx, toY(points[i-1]), cx, toY(points[i]), toX(i), toY(points[i]));
+    }
+    ctx.lineTo(toX(points.length-1), PAD.top + cH);
+    ctx.lineTo(toX(0), PAD.top + cH);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // line
+    ctx.beginPath();
+    ctx.moveTo(toX(0), toY(points[0]));
+    for (let i = 1; i < points.length; i++) {
+      const cx = (toX(i-1) + toX(i)) / 2;
+      ctx.bezierCurveTo(cx, toY(points[i-1]), cx, toY(points[i]), toX(i), toY(points[i]));
+    }
+    ctx.strokeStyle = GREEN;
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = GREEN;
+    ctx.shadowBlur = 4;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // endpoint dot
+    const ex = toX(points.length - 1);
+    const ey = toY(points[points.length - 1]);
+    ctx.beginPath();
+    ctx.arc(ex, ey, 3, 0, Math.PI * 2);
+    ctx.fillStyle = GREEN;
+    ctx.shadowColor = GREEN;
+    ctx.shadowBlur = 8;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // ── bar chart ──────────────────────────────────────────────────
+  function drawBarChart(canvas, values) {
+    if (!canvas.getBoundingClientRect().width) return;
+    const [ctx, W, H] = sizeCanvas(canvas);
+    ctx.clearRect(0, 0, W, H);
+
+    const PAD = { top: 16, right: 12, bottom: 28, left: 36 };
+    const cW = W - PAD.left - PAD.right;
+    const cH = H - PAD.top  - PAD.bottom;
+    const n   = values.length;
+    const maxV = Math.max(...values, 1);
+    const barW = (cW / n) * 0.6;
+    const gap  = cW / n;
+
+    // y gridlines
+    ctx.font = `500 9px 'JetBrains Mono', monospace`;
+    ctx.fillStyle = TEXT_DIM;
+    ctx.textAlign = 'right';
+    const yTicks = 4;
+    for (let t = 0; t <= yTicks; t++) {
+      const pct = t / yTicks;
+      const y = PAD.top + cH - pct * cH;
+      ctx.strokeStyle = BORDER_COL;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(PAD.left, y);
+      ctx.lineTo(PAD.left + cW, y);
+      ctx.stroke();
+      if (t > 0) ctx.fillText(Math.round(pct * maxV), PAD.left - 5, y + 3);
+    }
+
+    // bars
+    const now = new Date();
+    ctx.font = `500 9px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = TEXT_DIM;
+
+    values.forEach((v, i) => {
+      const x   = PAD.left + i * gap + (gap - barW) / 2;
+      const bH  = Math.max(1, (v / maxV) * cH);
+      const y   = PAD.top + cH - bH;
+
+      // bar fill with subtle glow at top
+      const bGrad = ctx.createLinearGradient(0, y, 0, PAD.top + cH);
+      bGrad.addColorStop(0, 'rgba(0,255,157,0.55)');
+      bGrad.addColorStop(1, 'rgba(0,255,157,0.10)');
+      ctx.fillStyle = bGrad;
+      ctx.fillRect(x, y, barW, bH);
+
+      // top line accent
+      ctx.fillStyle = GREEN;
+      ctx.fillRect(x, y, barW, 1);
+
+      // hour label
+      const h = (now.getHours() - (n - 1 - i) + 48) % 24;
+      ctx.fillStyle = TEXT_DIM;
+      ctx.fillText(String(h).padStart(2,'0'), x + barW / 2, H - 6);
+    });
+  }
+
+  // ── top queries table ──────────────────────────────────────────
+  function renderTopQueries(rows) {
+    const tbody = $('tq-tbody');
+    if (!rows || rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" class="tq-empty">No cached queries yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.slice(0, 5).map((r, i) => {
+      const q = r.query.length > 40 ? r.query.slice(0, 40) + '…' : r.query;
+      return `<tr>
+        <td class="td-query" title="${r.query.replace(/"/g,'&quot;')}">
+          <span style="color:var(--text-dim);margin-right:0.4rem">${i+1}.</span>${q}
+        </td>
+        <td class="td-hits">${r.hits}</td>
+        <td class="td-time">${r.last_hit}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── draw all viz ──────────────────────────────────────────────
+  function renderViz() {
+    drawLineChart($('chart-hitrate'), chartHitRate);
+    drawBarChart($('chart-queries'),  chartQPH);
+    renderTopQueries(chartTopQ);
+  }
+
+  // ── derive viz data from live metrics ─────────────────────────
+  // The /metrics endpoint returns aggregates; we simulate the time-series
+  // by appending the current hit_rate as the newest data point.
+  function updateVizFromMetrics(data) {
+    // shift in new live point for line chart
+    chartHitRate.push(data.hit_rate);
+    if (chartHitRate.length > 24) chartHitRate.shift();
+
+    // derive approximate QPH from total_queries delta
+    const delta = prevData
+      ? Math.max(0, data.total_queries - prevData.total_queries)
+      : 0;
+    chartQPH.push(delta);
+    if (chartQPH.length > 12) chartQPH.shift();
+
+    // top queries come from data.top_queries if present
+    if (data.top_queries && Array.isArray(data.top_queries)) {
+      chartTopQ = data.top_queries;
+    }
+
+    renderViz();
+  }
+
+  // ── UI helpers ─────────────────────────────────────────────────
+  function setStatus(state) {
+    const pill = $('status-pill');
+    pill.className = 'status-pill ' + state;
+    $('status-text').textContent = state.toUpperCase();
+  }
+
+  function showNotice(type, msg, code = '') {
+    const el = $('notice');
+    el.className = 'notice visible ' + type;
+    $('notice-msg').textContent = msg;
+    $('notice-code').textContent = code;
+  }
+
+  function hideNotice() {
+    $('notice').className = 'notice';
+  }
+
+  function flashCard(cardId) {
+    const card = $(cardId);
+    const val  = card.querySelector('.card-value');
+    card.classList.remove('updated');
+    val.classList.remove('flash');
+    void card.offsetWidth;
+    card.classList.add('updated');
+    val.classList.add('flash');
+    setTimeout(() => { card.classList.remove('updated'); val.classList.remove('flash'); }, 1200);
+  }
+
+  function updateLastUpdated() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    const ss = String(now.getSeconds()).padStart(2,'0');
+    $('last-updated').textContent = `${hh}:${mm}:${ss}`;
+  }
+
+  // ── animated counter ──────────────────────────────────────────
+  function animateCount(el, from, to, format, duration = 600) {
+    const start = performance.now();
+    function tick(now) {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.innerHTML = format(from + (to - from) * eased);
+      if (t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // ── render stat cards ─────────────────────────────────────────
+  function renderMetrics(data) {
+    const isFirst = prevData === null;
+    const changed = key => isFirst || prevData[key] !== data[key];
+
+    if (changed('hit_rate')) {
+      const prev = prevData?.hit_rate ?? 0;
+      const curr = data.hit_rate;
+      const valEl = $('val-hit-rate');
+      valEl.classList.remove('empty');
+      animateCount(valEl, prev * 100, curr * 100, v =>
+        `${v.toFixed(1)}<span class="card-unit">%</span>`
+      );
+      $('hit-bar').style.right = ((1 - curr) * 100).toFixed(1) + '%';
+      $('sub-hit-rate').textContent = curr >= 0.5
+        ? 'Cache is working hard'
+        : curr > 0 ? 'Warming up...' : 'No hits yet';
+      if (!isFirst) flashCard('card-hit-rate');
+    }
+
+    if (changed('total_queries')) {
+      const prev = prevData?.total_queries ?? 0;
+      const curr = data.total_queries;
+      const valEl = $('val-total-queries');
+      valEl.classList.remove('empty');
+      animateCount(valEl, prev, curr, v => Math.round(v).toLocaleString());
+      $('sub-total-queries').textContent = 'all time';
+      if (!isFirst) flashCard('card-total-queries');
+    }
+
+    if (changed('tokens_saved')) {
+      const prev = prevData?.tokens_saved ?? 0;
+      const curr = data.tokens_saved;
+      const valEl = $('val-tokens-saved');
+      valEl.classList.remove('empty');
+      animateCount(valEl, prev, curr, v => {
+        const n = Math.round(v);
+        return n >= 1_000_000
+          ? (n/1_000_000).toFixed(2) + '<span class="card-unit">M</span>'
+          : n >= 1_000
+          ? (n/1_000).toFixed(1) + '<span class="card-unit">K</span>'
+          : n.toLocaleString();
+      });
+      $('sub-tokens-saved').textContent = 'vs direct LLM calls';
+      if (!isFirst) flashCard('card-tokens-saved');
+    }
+
+    if (changed('cost_saved')) {
+      const prev = prevData?.cost_saved ?? 0;
+      const curr = data.cost_saved;
+      const valEl = $('val-cost-saved');
+      valEl.classList.remove('empty');
+      animateCount(valEl, prev, curr, v =>
+        `<span class="card-unit" style="margin-left:0;margin-right:1px">$</span>${v.toFixed(2)}`
+      );
+      $('sub-cost-saved').textContent = 'GPT-4o blended rate';
+      if (!isFirst) flashCard('card-cost-saved');
+    }
+
+    updateVizFromMetrics(data);
+    prevData = { ...data };
+  }
+
+  // ── countdown ─────────────────────────────────────────────────
+  function startCountdown() {
+    cancelAnimationFrame(countdownRaf);
+    const fill = $('countdown-fill');
+    const start = performance.now();
+    function tick(now) {
+      const progress = Math.min((now - start) / REFRESH_MS, 1);
+      fill.style.transform = `scaleX(${1 - progress})`;
+      if (progress < 1) countdownRaf = requestAnimationFrame(tick);
+    }
+    countdownRaf = requestAnimationFrame(tick);
+  }
+
+  // ── fetch ─────────────────────────────────────────────────────
+  async function fetchMetrics() {
+    if (!apiKey) return;
+    startCountdown();
+    try {
+      const res = await fetch(`${BASE_URL}/metrics`, {
+        headers: { 'X-API-Key': apiKey },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (res.status === 401) {
+        setStatus('offline');
+        showNotice('error', 'Invalid API key — authentication failed.', 'HTTP 401');
+        return;
+      }
+      if (res.status === 404) {
+        setStatus('offline');
+        showNotice('error', 'API key not found in database.', 'HTTP 404');
+        return;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+      setStatus('live');
+      hideNotice();
+      updateLastUpdated();
+      renderMetrics(data);
+    } catch (err) {
+      setStatus('offline');
+      const msg = err.name === 'TimeoutError'
+        ? 'Request timed out — is the backend running?'
+        : `Could not reach ${BASE_URL}`;
+      showNotice('error', msg, err.name === 'TimeoutError' ? 'TIMEOUT' : 'NETWORK ERR');
+    }
+  }
+
+  function scheduleRefresh() {
+    clearInterval(refreshTimer);
+    refreshTimer = setInterval(fetchMetrics, REFRESH_MS);
+  }
+
+  function connect() {
+    const raw = $('api-key-input').value.trim();
+    if (!raw) {
+      showNotice('warn', 'Paste your ThriftLM API key above and click CONNECT.');
+      return;
+    }
+    apiKey = raw;
+    $('ticker-url').textContent = BASE_URL;
+    $('ticker-key').textContent = apiKey.length > 12
+      ? apiKey.slice(0, 6) + '···' + apiKey.slice(-4)
+      : apiKey;
+    hideNotice();
+    fetchMetrics();
+    scheduleRefresh();
+  }
+
+  // ── events ────────────────────────────────────────────────────
+  $('connect-btn').addEventListener('click', connect);
+  $('refresh-btn').addEventListener('click', () => { if (apiKey) { fetchMetrics(); scheduleRefresh(); } });
+  $('api-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') connect(); });
+
+  // redraw charts on resize
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderViz, 80);
+  });
+
+  // ── init ──────────────────────────────────────────────────────
+  setStatus('waiting');
+  startCountdown();
+
+  // draw mock charts immediately after layout settles
+  requestAnimationFrame(() => {
+    requestAnimationFrame(renderViz);
+  });
+  renderTopQueries(chartTopQ);
+})();
+</script>
+</body>
+</html>
