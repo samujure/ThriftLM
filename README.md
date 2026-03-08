@@ -359,16 +359,8 @@ python scratch/qqp_benchmark.py
 - `thriftlm serve` — bundled local dashboard CLI
 - `pip install thriftlm`
 
-**V2 — Agentic Plan Caching (next)**
-
-V1 caches individual responses. V2 caches entire agent **plans** — multi-step action sequences generated for agentic loops. When intent repeats, skip re-planning and replay the cached plan. Built for Claude Code SDK and long-running agent workflows.
-
-Key papers: [APC (arxiv 2506.14852)](https://arxiv.org/abs/2506.14852) · [GenCache](https://openreview.net/pdf?id=MHGViOjZ27)
-
-**Later**
-- ClawHub / OpenClaw distribution
-- Per-model cost analytics dashboard
-- Precision benchmark (false positive rate on non-duplicate pairs)
+**V2 — coming soon**
+- Context caching
 
 ---
 
