@@ -2,7 +2,7 @@
 
 ## Credits
 Ideated by Ivan Thomas Shen and Srivamsi Amujure.
-Do NOT add "Co-authored-by: Claude" or any AI attribution to git commits.
+
 
 ---
 
@@ -53,7 +53,7 @@ One env variable is the entire difference.
 
 ---
 
-## V1 Scope (3 weeks, then done)
+## V1 Scope
 - [ ] pip-installable Python library (`semantic_cache/`)
 - [ ] FastAPI backend with API key auth
 - [ ] Supabase (pgvector) for vector storage, isolated namespace per API key
@@ -64,7 +64,7 @@ One env variable is the entire difference.
 - [ ] Published to PyPI
 - [ ] MIT licensed, fully open source
 
-**No V2 scope in this repo. Ship V1 clean and move on.**
+
 
 ---
 
@@ -206,4 +206,3 @@ Scaffolding phase. Start with:
 - V2 cross-app shared pool
 - Anything not in the V1 scope checklist above
 
-If a feature isn't in the V1 scope list, reject it and stay focused.
