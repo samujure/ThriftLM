@@ -7,31 +7,36 @@
   <title>ThriftLM // Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0a0a0a;
-      --bg-card:   #0f0f0f;
-      --bg-input:  #111111;
-      --border:    #1e1e1e;
-      --border-hi: #2a2a2a;
-      --green:     #00ff9d;
-      --green-dim: #00c977;
-      --red:       #ff3b3b;
-      --amber:     #f5a623;
-      --text:      #c8c8c8;
-      --text-dim:  #555;
-      --text-hi:   #f0f0f0;
-      --mono:      'JetBrains Mono', monospace;
+      --bg: #08090a;
+      --bg-2: #0e1012;
+      --border: rgba(255,255,255,0.08);
+      --border-2: rgba(255,255,255,0.13);
+      --text: #f0f0f0;
+      --muted: #6b7280;
+      --dim: #2a2d31;
+      --green: #dd7bbb;
+      --green-dim: #4c7894;
+      --red: #f87171;
+      --amber: #fbbf24;
+      --spread: 20;
+      --c1: #dd7bbb;
+      --c2: #d79f1e;
+      --c3: #5a922c;
+      --c4: #4c7894;
+      /* legacy alias used in JS template literals */
+      --text-dim: var(--muted);
     }
 
     html, body {
       height: 100%;
       background: var(--bg);
       color: var(--text);
-      font-family: var(--mono);
+      font-family: 'Instrument Sans', sans-serif;
       font-size: 13px;
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
@@ -43,31 +48,17 @@
       min-height: 100vh;
     }
 
-    /* scanline overlay */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0,0,0,0.07) 2px,
-        rgba(0,0,0,0.07) 4px
-      );
+      background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 80px 80px;
+      mask-image: radial-gradient(ellipse 100% 60% at 50% 0%, black 30%, transparent 100%);
       pointer-events: none;
-      z-index: 9999;
-    }
-
-    /* noise overlay */
-    body::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-      opacity: 0.025;
-      pointer-events: none;
-      z-index: 9998;
+      opacity: .35;
+      z-index: 0;
     }
 
     .shell {
@@ -80,60 +71,41 @@
       flex-direction: column;
     }
 
-    /* ── header ── */
-    header {
+    /* ── nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: 52px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       border-bottom: 1px solid var(--border);
-      padding-bottom: 0.85rem;
-      margin-bottom: 1.25rem;
-      flex-shrink: 0;
-    }
-
-    .wordmark {
-      display: flex;
-      align-items: baseline;
-      gap: 0.5rem;
-    }
-
-    .wordmark-logo {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--text-hi);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-
-    .wordmark-sub {
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      letter-spacing: 0.08em;
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
+      background: rgba(8,9,10,0.75);
+      backdrop-filter: blur(16px);
+      padding: 0 1.75rem;
+      margin: 0 -1.75rem 2rem;
     }
 
     .status-pill {
       display: flex;
       align-items: center;
       gap: 0.4rem;
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--text-dim);
+      padding: 0.28rem 0.75rem;
+      border: 1px solid var(--border-2);
+      border-radius: 100px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem;
+      letter-spacing: 0.06em;
+      color: var(--muted);
       transition: color 0.3s;
     }
     .status-pill.live    { color: var(--green); }
     .status-pill.offline { color: var(--red); }
 
     .status-dot {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       background: currentColor;
     }
@@ -147,27 +119,31 @@
     }
 
     .last-updated {
+      font-family: 'JetBrains Mono', monospace;
       font-size: 0.65rem;
-      color: var(--text-dim);
+      color: var(--muted);
     }
 
     /* ── api key row ── */
     .key-row {
       display: flex;
-      gap: 0.5rem;
+      gap: 0;
       margin-bottom: 1.25rem;
       align-items: stretch;
       flex-shrink: 0;
+      border: 1px solid var(--border-2);
+      border-radius: 10px;
+      overflow: hidden;
     }
 
     .key-prefix {
       display: flex;
       align-items: center;
       padding: 0 0.75rem;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-right: none;
-      color: var(--text-dim);
+      background: var(--bg-2);
+      border-right: 1px solid var(--border-2);
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
       font-size: 0.75rem;
       letter-spacing: 0.05em;
       user-select: none;
@@ -175,44 +151,43 @@
 
     #api-key-input {
       flex: 1;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      color: var(--text-hi);
-      font-family: var(--mono);
+      background: var(--bg-2);
+      border: none;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
       font-size: 0.8rem;
       padding: 0.55rem 0.75rem;
       outline: none;
-      transition: border-color 0.2s;
       min-width: 0;
     }
-    #api-key-input::placeholder { color: var(--text-dim); }
-    #api-key-input:focus { border-color: var(--border-hi); }
+    #api-key-input::placeholder { color: var(--muted); }
 
-    .btn {
-      background: transparent;
-      border: 1px solid var(--border-hi);
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 0.75rem;
+    #connect-btn {
+      background: #fff;
+      color: #000;
+      font-family: 'Instrument Sans', sans-serif;
       font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
+      font-size: 0.8rem;
+      border: none;
       padding: 0.55rem 1.25rem;
       cursor: pointer;
-      transition: border-color 0.2s, color 0.2s, background 0.2s;
       white-space: nowrap;
+      transition: opacity .2s;
     }
-    .btn:hover {
-      border-color: var(--green-dim);
-      color: var(--green);
+    #connect-btn:hover { opacity: .88; }
+
+    #refresh-btn {
+      background: transparent;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      border: none;
+      border-left: 1px solid var(--border-2);
+      padding: 0.55rem 0.9rem;
+      cursor: pointer;
+      transition: color .2s;
     }
-    .btn.primary {
-      border-color: var(--green-dim);
-      color: var(--green);
-    }
-    .btn.primary:hover {
-      background: rgba(0,255,157,0.06);
-    }
+    #refresh-btn:hover { color: var(--text); }
 
     /* ── stat cards ── */
     .cards {
@@ -230,65 +205,75 @@
       .viz-row { grid-template-columns: 1fr !important; }
     }
 
-    .card {
-      background: var(--bg-card);
-      padding: 2rem 1.6rem 1.6rem;
+    .glow-card {
       position: relative;
+      background: var(--bg-2);
+      padding: 1.75rem 1.6rem 1.5rem;
+      transition: background .2s;
       overflow: hidden;
-      transition: background 0.15s;
     }
-    .card:hover { background: #111; }
-
-    .card-accent {
+    .glow-card:hover { background: var(--bg); }
+    .glow-card::before {
+      content: '';
       position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: var(--border-hi);
-      transition: background 0.4s, box-shadow 0.4s;
+      inset: -1px;
+      border-radius: inherit;
+      background: conic-gradient(
+        from calc((var(--start,0) - var(--spread,20)) * 1deg) at 50% 50%,
+        transparent 0deg,
+        var(--c1) calc(360deg * .15 / 5),
+        var(--c2) calc(360deg * .30 / 5),
+        var(--c3) calc(360deg * .45 / 5),
+        var(--c4) calc(360deg * .60 / 5),
+        transparent calc(var(--spread,20) * 2deg)
+      );
+      opacity: 0;
+      transition: opacity .4s;
+      -webkit-mask: linear-gradient(#000,#000) content-box, linear-gradient(#000,#000);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      padding: 1px;
     }
-    .card.updated .card-accent {
-      background: var(--green);
-      box-shadow: 0 0 10px var(--green);
-    }
+    .glow-card:hover::before { opacity: calc(var(--active,0) * 1); }
 
     .card-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.15em;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.63rem;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
-      color: var(--text-dim);
+      color: var(--muted);
       margin-bottom: 1.2rem;
     }
 
     .card-value {
-      font-size: 3.2rem;
-      font-weight: 700;
-      color: var(--text-hi);
+      font-family: 'Instrument Serif', serif;
+      font-size: 3.4rem;
+      font-weight: 400;
+      background: linear-gradient(135deg, #dd7bbb 0%, #d79f1e 40%, #4c7894 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
       line-height: 1;
       letter-spacing: -0.03em;
-      transition: color 0.3s;
-      min-height: 3.2rem;
+      min-height: 3.4rem;
     }
-    .card-value.flash { color: var(--green); }
+    .card-value.empty { background: none; -webkit-text-fill-color: var(--muted); }
+    .card-value.flash { opacity: 0.7; }
 
     .card-unit {
-      display: inline-block;
-      font-size: 1.1rem;
-      font-weight: 400;
-      color: var(--text-dim);
-      margin-left: 0.2rem;
-      vertical-align: bottom;
-      padding-bottom: 0.4rem;
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      -webkit-text-fill-color: rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.3);
     }
 
     .card-sub {
       margin-top: 0.9rem;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 0.65rem;
-      color: var(--text-dim);
+      color: var(--muted);
       letter-spacing: 0.05em;
     }
-
-    .card-value.empty { color: var(--text-dim); }
 
     .hit-bar-track {
       margin-top: 1rem;
@@ -300,8 +285,8 @@
     .hit-bar-fill {
       position: absolute;
       inset: 0 100% 0 0;
-      background: var(--green);
-      box-shadow: 0 0 6px var(--green);
+      background: linear-gradient(90deg, var(--c1), var(--c4));
+      box-shadow: 0 0 6px var(--c1);
       transition: right 0.8s cubic-bezier(0.16,1,0.3,1);
     }
 
@@ -309,12 +294,15 @@
     .bottom-bar {
       border: 1px solid var(--border);
       border-top: none;
-      padding: 0.45rem 1rem;
+      border-radius: 0 0 10px 10px;
+      padding: 0.5rem 1.25rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: var(--bg-card);
+      background: var(--bg-2);
       flex-shrink: 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.63rem;
     }
 
     .bottom-left {
@@ -325,7 +313,7 @@
 
     .ticker {
       font-size: 0.65rem;
-      color: var(--text-dim);
+      color: var(--muted);
       letter-spacing: 0.05em;
     }
     .ticker span { color: var(--text); }
@@ -337,7 +325,7 @@
     }
     .countdown-label {
       font-size: 0.6rem;
-      color: var(--text-dim);
+      color: var(--muted);
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
@@ -351,7 +339,7 @@
     .countdown-fill {
       position: absolute;
       inset: 0;
-      background: var(--border-hi);
+      background: var(--border-2);
       transform-origin: left;
       transform: scaleX(1);
     }
@@ -364,17 +352,20 @@
       background: var(--border);
       border: 1px solid var(--border);
       border-top: none;
+      border-radius: 0 0 14px 14px;
       flex: 1;
       min-height: 0;
+      overflow: hidden;
     }
 
     .viz-panel {
-      background: var(--bg-card);
+      background: var(--bg-2);
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      transition: background .2s;
     }
-    .viz-panel:hover { background: #101010; }
+    .viz-panel:hover { background: var(--bg); }
 
     .viz-header {
       display: flex;
@@ -386,19 +377,21 @@
     }
 
     .viz-title {
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.13em;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.63rem;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: var(--text-dim);
+      color: var(--muted);
     }
 
     .viz-badge {
+      font-family: 'JetBrains Mono', monospace;
       font-size: 0.55rem;
+      border: 1px solid var(--border-2);
+      border-radius: 4px;
+      padding: 0.12rem 0.45rem;
+      color: var(--muted);
       letter-spacing: 0.08em;
-      color: var(--text-dim);
-      border: 1px solid var(--border-hi);
-      padding: 0.1rem 0.4rem;
       text-transform: uppercase;
     }
 
@@ -422,11 +415,12 @@
       font-size: 0.7rem;
     }
     .tq-table thead tr {
-      border-bottom: 1px solid var(--border-hi);
+      border-bottom: 1px solid var(--border-2);
     }
     .tq-table th {
       text-align: left;
-      color: var(--text-dim);
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
@@ -439,21 +433,27 @@
       border-bottom: 1px solid var(--border);
       color: var(--text);
       vertical-align: middle;
+      font-family: 'JetBrains Mono', monospace;
     }
-    .tq-table td:not(:first-child) { text-align: right; color: var(--text-dim); }
+    .tq-table td:not(:first-child) { text-align: right; color: var(--muted); }
     .tq-table tr:last-child td { border-bottom: none; }
     .tq-table .td-query {
-      color: var(--text-hi);
+      color: var(--text);
       max-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .tq-table .td-hits { color: var(--green); font-weight: 700; }
+    .tq-table .td-hits {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.1rem;
+      color: var(--c1);
+      font-style: italic;
+    }
     .tq-table .td-time { font-size: 0.6rem; }
 
     .tq-empty {
-      color: var(--text-dim);
+      color: var(--muted);
       font-size: 0.7rem;
       padding-top: 0.75rem;
     }
@@ -462,16 +462,18 @@
     .notice {
       margin-top: 0.75rem;
       border: 1px solid var(--border);
+      border-radius: 8px;
       padding: 0.6rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 0.75rem;
       display: none;
       align-items: center;
       gap: 0.5rem;
       flex-shrink: 0;
     }
-    .notice.error   { border-color: var(--red);      color: var(--red); }
-    .notice.warn    { border-color: var(--amber);     color: var(--amber); }
-    .notice.info    { border-color: var(--border-hi); color: var(--text-dim); }
+    .notice.error   { border-color: rgba(248,113,113,.3); color: var(--red);   background: rgba(248,113,113,.04); }
+    .notice.warn    { border-color: rgba(251,191,36,.3);  color: var(--amber); background: rgba(251,191,36,.04); }
+    .notice.info    { border-color: var(--border-2); color: var(--muted); }
     .notice.visible { display: flex; }
     .notice-code    { opacity: 0.6; font-size: 0.65rem; }
   </style>
@@ -479,19 +481,24 @@
 <body>
 <div class="shell">
 
-  <header>
-    <div class="wordmark">
-      <span class="wordmark-logo">ThriftLM</span>
-      <span class="wordmark-sub">// cache monitor</span>
-    </div>
-    <div class="header-right">
-      <span class="last-updated" id="last-updated">--:--:--</span>
+  <nav>
+    <a href="/" style="font-family:'Instrument Serif',serif;font-size:1.15rem;color:var(--text);text-decoration:none;letter-spacing:-0.01em">Thrift<em style="font-style:italic;color:rgba(240,240,240,0.45)">LM</em></a>
+    <div style="display:flex;align-items:center;gap:1.5rem">
+      <a href="/#how-it-works" style="font-size:0.8rem;color:var(--muted);text-decoration:none">How it works</a>
+      <a href="/#benchmark" style="font-size:0.8rem;color:var(--muted);text-decoration:none">Benchmark</a>
+      <a href="https://github.com/samujure/ThriftLM" target="_blank" style="font-size:0.8rem;color:var(--muted);text-decoration:none">GitHub</a>
       <div class="status-pill" id="status-pill">
         <div class="status-dot"></div>
         <span id="status-text">WAITING</span>
       </div>
+      <span class="last-updated" id="last-updated">--:--:--</span>
     </div>
-  </header>
+  </nav>
+
+  <div style="margin-bottom:1.5rem">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem">Cache Monitor</div>
+    <h1 style="font-family:'Instrument Serif',serif;font-size:1.8rem;font-weight:400;color:#fff;letter-spacing:-0.025em">Live <em style="font-style:italic;color:rgba(255,255,255,.35)">metrics.</em></h1>
+  </div>
 
   <div class="key-row">
     <div class="key-prefix">API KEY</div>
@@ -502,32 +509,28 @@
       autocomplete="off"
       spellcheck="false"
     />
-    <button class="btn primary" id="connect-btn">CONNECT</button>
-    <button class="btn" id="refresh-btn" title="Refresh now">&#8635;</button>
+    <button id="connect-btn">Connect →</button>
+    <button id="refresh-btn" title="Refresh now">&#8635;</button>
   </div>
 
   <div class="cards">
-    <div class="card" id="card-hit-rate">
-      <div class="card-accent"></div>
+    <div class="glow-card" id="card-hit-rate">
       <div class="card-label">Hit Rate</div>
       <div class="card-value empty" id="val-hit-rate">—<span class="card-unit">%</span></div>
       <div class="hit-bar-track"><div class="hit-bar-fill" id="hit-bar" style="right:100%"></div></div>
       <div class="card-sub" id="sub-hit-rate">&nbsp;</div>
     </div>
-    <div class="card" id="card-total-queries">
-      <div class="card-accent"></div>
+    <div class="glow-card" id="card-total-queries">
       <div class="card-label">Total Queries</div>
       <div class="card-value empty" id="val-total-queries">—</div>
       <div class="card-sub" id="sub-total-queries">&nbsp;</div>
     </div>
-    <div class="card" id="card-tokens-saved">
-      <div class="card-accent"></div>
+    <div class="glow-card" id="card-tokens-saved">
       <div class="card-label">Tokens Saved</div>
       <div class="card-value empty" id="val-tokens-saved">—</div>
       <div class="card-sub" id="sub-tokens-saved">&nbsp;</div>
     </div>
-    <div class="card" id="card-cost-saved">
-      <div class="card-accent"></div>
+    <div class="glow-card" id="card-cost-saved">
       <div class="card-label">Cost Saved</div>
       <div class="card-value empty" id="val-cost-saved"><span class="card-unit" style="margin-left:0;margin-right:1px">$</span>—</div>
       <div class="card-sub" id="sub-cost-saved">&nbsp;</div>
@@ -645,8 +648,8 @@
   let chartTopQ     = genMockTopQueries();
 
   // ── canvas utils ───────────────────────────────────────────────
-  const GREEN      = '#00ff9d';
-  const GREEN_DIM  = 'rgba(0,255,157,0.12)';
+  const GREEN      = '#dd7bbb';
+  const GREEN2     = '#4c7894';
   const BORDER_COL = '#1e1e1e';
   const TEXT_DIM   = '#555';
   const TEXT_COL   = '#888';
@@ -706,8 +709,8 @@
     const toY = v => PAD.top + cH - (v - min) / (max - min) * cH;
 
     const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + cH);
-    grad.addColorStop(0, 'rgba(0,255,157,0.18)');
-    grad.addColorStop(1, 'rgba(0,255,157,0)');
+    grad.addColorStop(0, 'rgba(221,123,187,0.18)');
+    grad.addColorStop(1, 'rgba(76,120,148,0.03)');
 
     ctx.beginPath();
     ctx.moveTo(toX(0), toY(points[0]));
@@ -722,15 +725,18 @@
     ctx.fill();
 
     // line
+    const lineGrad = ctx.createLinearGradient(PAD.left, 0, PAD.left + cW, 0);
+    lineGrad.addColorStop(0, '#dd7bbb');
+    lineGrad.addColorStop(1, '#4c7894');
     ctx.beginPath();
     ctx.moveTo(toX(0), toY(points[0]));
     for (let i = 1; i < points.length; i++) {
       const cx = (toX(i-1) + toX(i)) / 2;
       ctx.bezierCurveTo(cx, toY(points[i-1]), cx, toY(points[i]), toX(i), toY(points[i]));
     }
-    ctx.strokeStyle = GREEN;
+    ctx.strokeStyle = lineGrad;
     ctx.lineWidth = 1.5;
-    ctx.shadowColor = GREEN;
+    ctx.shadowColor = '#dd7bbb';
     ctx.shadowBlur = 4;
     ctx.stroke();
     ctx.shadowBlur = 0;
@@ -740,8 +746,8 @@
     const ey = toY(points[points.length - 1]);
     ctx.beginPath();
     ctx.arc(ex, ey, 3, 0, Math.PI * 2);
-    ctx.fillStyle = GREEN;
-    ctx.shadowColor = GREEN;
+    ctx.fillStyle = GREEN2;
+    ctx.shadowColor = GREEN2;
     ctx.shadowBlur = 8;
     ctx.fill();
     ctx.shadowBlur = 0;
@@ -789,16 +795,22 @@
       const bH  = Math.max(1, (v / maxV) * cH);
       const y   = PAD.top + cH - bH;
 
-      // bar fill with subtle glow at top
+      // bar fill
       const bGrad = ctx.createLinearGradient(0, y, 0, PAD.top + cH);
-      bGrad.addColorStop(0, 'rgba(0,255,157,0.55)');
-      bGrad.addColorStop(1, 'rgba(0,255,157,0.10)');
+      bGrad.addColorStop(0, 'rgba(221,123,187,0.55)');
+      bGrad.addColorStop(1, 'rgba(76,120,148,0.08)');
       ctx.fillStyle = bGrad;
       ctx.fillRect(x, y, barW, bH);
 
       // top line accent
-      ctx.fillStyle = GREEN;
+      const accentGrad = ctx.createLinearGradient(x, 0, x + barW, 0);
+      accentGrad.addColorStop(0, '#dd7bbb');
+      accentGrad.addColorStop(1, '#4c7894');
+      ctx.fillStyle = accentGrad;
+      ctx.shadowColor = '#dd7bbb';
+      ctx.shadowBlur = 4;
       ctx.fillRect(x, y, barW, 1);
+      ctx.shadowBlur = 0;
 
       // hour label
       const h = (now.getHours() - (n - 1 - i) + 48) % 24;
@@ -1049,9 +1061,32 @@
     resizeTimer = setTimeout(renderViz, 80);
   });
 
+  // ── glow effect ───────────────────────────────────────────────
+  function initGlow() {
+    const cards = document.querySelectorAll('.glow-card');
+    let lastX = 0, lastY = 0;
+    function update(e) {
+      lastX = e?.clientX ?? lastX; lastY = e?.clientY ?? lastY;
+      const x = lastX, y = lastY;
+      cards.forEach(card => {
+        const {left,top,width,height} = card.getBoundingClientRect();
+        const cx = left+width/2, cy = top+height/2;
+        const dist = Math.hypot(x-cx, y-cy);
+        if (dist < 0.5*Math.min(width,height)*0.7) { card.style.setProperty('--active','0'); return; }
+        const isActive = x>left && x<left+width && y>top && y<top+height;
+        card.style.setProperty('--active', isActive?'1':'0');
+        if (!isActive) return;
+        card.style.setProperty('--start', String((180*Math.atan2(y-cy,x-cx))/Math.PI+90));
+      });
+    }
+    document.addEventListener('pointermove', update, {passive:true});
+    window.addEventListener('scroll', ()=>update(), {passive:true});
+  }
+
   // ── init ──────────────────────────────────────────────────────
   setStatus('waiting');
   startCountdown();
+  initGlow();
 
   // draw mock charts immediately after layout settles
   requestAnimationFrame(() => {
