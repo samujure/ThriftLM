@@ -200,6 +200,8 @@ ThriftLM/
 ├── thriftlm/
 │   ├── __init__.py              # Public API: SemanticCache
 │   ├── cache.py                 # Core lookup/store logic
+│   ├── cli.py                   # thriftlm serve CLI entry point
+│   ├── _server.py               # FastAPI app for thriftlm serve
 │   ├── config.py                # Env config
 │   ├── embedder.py              # SBERT wrapper
 │   ├── privacy.py               # Presidio PII scrubbing
@@ -245,6 +247,30 @@ POST /keys      { "email": "..." }                                 → { "api_ke
 GET  /health                                                       → { "status": "ok" }
 GET  /                                                             → landing page (docs/index.html)
 ```
+
+---
+
+## Dashboard
+
+`thriftlm serve` starts a local FastAPI server that serves the metrics dashboard and reads your Supabase data directly. Bundled inside the pip package — no separate deploy needed.
+
+```bash
+# Requires the api extras for FastAPI + Supabase
+pip install thriftlm[api]
+
+# Start the dashboard (auto-opens browser at http://localhost:8000)
+thriftlm serve --api-key sc_xxx
+
+# Custom port or host
+thriftlm serve --api-key sc_xxx --port 9000 --host 0.0.0.0
+
+# Skip auto-open
+thriftlm serve --api-key sc_xxx --no-browser
+```
+
+Make sure `SUPABASE_URL` and `SUPABASE_KEY` are set in your `.env` before running.
+
+The dashboard shows hit rate, total queries, tokens saved, cost saved, and top 5 queries by cache hits — updating live every 30 seconds.
 
 ---
 

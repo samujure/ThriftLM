@@ -1093,6 +1093,13 @@
     requestAnimationFrame(renderViz);
   });
   renderTopQueries(chartTopQ);
+
+  // auto-connect when launched via `thriftlm serve --api-key`
+  const metaKey = document.querySelector('meta[name="thriftlm-key"]');
+  if (metaKey?.content) {
+    $('api-key-input').value = metaKey.content;
+    connect();
+  }
 })();
 </script>
 </body>
