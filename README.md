@@ -10,7 +10,8 @@ Redis-fast exact hits. Numpy-powered near-miss matching. PII-scrubbed by default
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ```bash
-pip install thriftlm
+pip install thriftlm          # library only
+pip install thriftlm[api]     # + dashboard server + Supabase backend
 ```
 
 </div>
@@ -76,7 +77,8 @@ Cache hit order:
 ### 1. Install
 
 ```bash
-pip install thriftlm
+pip install thriftlm          # library only
+pip install thriftlm[api]     # also enables thriftlm serve + self-hosted backend
 ```
 
 ### 2. Set up Supabase
@@ -134,12 +136,112 @@ def call_llm(query: str) -> str:
     )
     return response.choices[0].message.content
 
-# Drop-in wrapper
+# Drop-in wrapper — handles cache check + LLM fallback automatically
 response = cache.get_or_call("Explain semantic caching", call_llm)
 
 # Near-duplicate → instant cache hit, no LLM called
 response2 = cache.get_or_call("What is semantic caching?", call_llm)
 ```
+
+### 6. View your metrics
+
+```bash
+thriftlm serve --api-key your-key
+# → ThriftLM dashboard → http://localhost:8000
+# → Opens browser automatically
+```
+
+Requires `pip install thriftlm[api]`. See [Local Dashboard](#local-dashboard-thriftlm-serve) below.
+
+---
+
+## Local Dashboard (`thriftlm serve`)
+
+`thriftlm serve` starts a **local FastAPI server at `localhost:8000`** that serves a live metrics dashboard and reads directly from your own Supabase — no hosted service, no external dependency.
+
+```
+                  ┌──────────────────────────────┐
+your browser  →   │  thriftlm serve (localhost)  │
+                  │  GET /  → dashboard.html      │
+                  │  GET /metrics → Supabase query│
+                  └──────────────┬───────────────┘
+                                 │ direct SQL
+                                 ▼
+                          your Supabase
+                         (api_keys table +
+                          cache_entries table)
+```
+
+**Usage:**
+
+```bash
+# Start dashboard, auto-opens http://localhost:8000
+thriftlm serve --api-key sc_xxx
+
+# Custom port
+thriftlm serve --api-key sc_xxx --port 9000
+
+# Bind to all interfaces (LAN access)
+thriftlm serve --api-key sc_xxx --host 0.0.0.0 --port 8080
+
+# Skip auto-open
+thriftlm serve --api-key sc_xxx --no-browser
+```
+
+**What it shows** — updates every 30 seconds:
+- Hit rate (%) and total queries
+- Tokens saved and estimated cost saved ($0.002/1K tokens blended)
+- Top 5 most-hit cached queries with timestamps
+
+**How the key works:** The key you pass to `--api-key` is the same `api_key` you used in `SemanticCache(api_key="...")`. It namespaces your cache in Supabase and authenticates the `/metrics` endpoint — no separate key management needed.
+
+---
+
+## Self-hosted API Backend (`api/`)
+
+The `api/` directory is a **multi-tenant FastAPI backend** for teams that want to centralize caching across multiple services. Clients call `/lookup` and `/store` instead of connecting to Supabase directly.
+
+```
+client app  →  POST /lookup  →  api/ backend  →  Supabase
+                                               →  Redis
+```
+
+### Run locally
+
+```bash
+pip install thriftlm[api]
+uvicorn api.main:app --reload
+```
+
+### Endpoints
+
+```
+POST /lookup    { "embedding": [...], "api_key": "..." }
+                → { "response": "..." } or null
+
+POST /store     { "embedding": [...], "query": "...", "response": "...", "api_key": "..." }
+                → 200 OK
+
+GET  /metrics   header: X-API-Key
+                → { "hit_rate", "tokens_saved", "cost_saved", "total_queries" }
+
+POST /keys      { "email": "..." }
+                → { "api_key": "sc_..." }
+
+GET  /health    → { "status": "ok" }
+
+GET  /          → landing page
+```
+
+### Difference from `thriftlm serve`
+
+| | `thriftlm serve` | `api/` backend |
+|---|---|---|
+| **Purpose** | Personal metrics dashboard | Centralized cache for your apps |
+| **Who runs it** | Developer, locally | DevOps, on a server |
+| **Client** | Your browser | Your application code |
+| **Supabase access** | Direct from server | Direct from server |
+| **Auth** | CLI `--api-key` arg | `api_keys` table in Supabase |
 
 ---
 
@@ -197,11 +299,11 @@ Dataset: mean sim=0.859, min=0.550, max=0.999
 
 ```
 ThriftLM/
-├── thriftlm/
+├── thriftlm/                    # pip package
 │   ├── __init__.py              # Public API: SemanticCache
 │   ├── cache.py                 # Core lookup/store logic
 │   ├── cli.py                   # thriftlm serve CLI entry point
-│   ├── _server.py               # FastAPI app for thriftlm serve
+│   ├── _server.py               # FastAPI app for thriftlm serve (localhost)
 │   ├── config.py                # Env config
 │   ├── embedder.py              # SBERT wrapper
 │   ├── privacy.py               # Presidio PII scrubbing
@@ -211,7 +313,7 @@ ThriftLM/
 │       ├── local_index.py       # Numpy cosine index
 │       ├── redis_backend.py     # Exact hash cache
 │       └── supabase_backend.py  # Vector storage + PK fetch
-├── api/
+├── api/                         # Self-hosted multi-tenant backend
 │   ├── main.py                  # FastAPI app
 │   ├── auth.py                  # API key auth
 │   └── routes/
@@ -219,8 +321,8 @@ ThriftLM/
 │       ├── metrics.py           # /metrics
 │       └── keys.py              # /keys
 ├── docs/
-│   └── index.html               # Landing page (GitHub Pages + FastAPI /)
-├── tests/                       # 66 passing tests
+│   └── index.html               # Landing page (GitHub Pages + api/ GET /)
+├── tests/                       # 69 passing tests
 ├── scratch/
 │   ├── smoke_test.py
 │   ├── openai_test.py
@@ -233,53 +335,12 @@ ThriftLM/
 
 ---
 
-## REST API
-
-```bash
-uvicorn api.main:app --reload
-```
-
-```
-POST /lookup    { "embedding": [...], "api_key": "..." }           → { "response": "..." | null }
-POST /store     { "embedding": [...], "query": "...", "response": "...", "api_key": "..." }  → 200
-GET  /metrics   header: X-API-Key                                  → { hit_rate, tokens_saved, cost_saved, total_queries }
-POST /keys      { "email": "..." }                                 → { "api_key": "sc_..." }
-GET  /health                                                       → { "status": "ok" }
-GET  /                                                             → landing page (docs/index.html)
-```
-
----
-
-## Dashboard
-
-`thriftlm serve` starts a local FastAPI server that serves the metrics dashboard and reads your Supabase data directly. Bundled inside the pip package — no separate deploy needed.
-
-```bash
-# Requires the api extras for FastAPI + Supabase
-pip install thriftlm[api]
-
-# Start the dashboard (auto-opens browser at http://localhost:8000)
-thriftlm serve --api-key sc_xxx
-
-# Custom port or host
-thriftlm serve --api-key sc_xxx --port 9000 --host 0.0.0.0
-
-# Skip auto-open
-thriftlm serve --api-key sc_xxx --no-browser
-```
-
-Make sure `SUPABASE_URL` and `SUPABASE_KEY` are set in your `.env` before running.
-
-The dashboard shows hit rate, total queries, tokens saved, cost saved, and top 5 queries by cache hits — updating live every 30 seconds.
-
----
-
 ## Development
 
 ```bash
 git clone https://github.com/samujure/ThriftLM
 cd ThriftLM
-pip install -e ".[dev]"
+pip install -e ".[dev,api]"
 cp .env.example .env
 docker compose up -d
 pytest tests/ -v
@@ -294,9 +355,9 @@ python scratch/qqp_benchmark.py
 **V1 — Shipped ✓**
 - Three-tier cache: Redis → LocalIndex → HNSW
 - Presidio PII scrubbing on responses
-- Multi-tenant FastAPI + API key auth
+- Multi-tenant `api/` FastAPI backend with API key auth
+- `thriftlm serve` — bundled local dashboard CLI
 - `pip install thriftlm`
-- Landing page (`docs/`) + metrics dashboard (`thriftlm/static/`)
 
 **V2 — Agentic Plan Caching (next)**
 
