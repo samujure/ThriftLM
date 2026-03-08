@@ -203,6 +203,8 @@ ThriftLM/
 │   ├── config.py                # Env config
 │   ├── embedder.py              # SBERT wrapper
 │   ├── privacy.py               # Presidio PII scrubbing
+│   ├── static/
+│   │   └── dashboard.html       # Metrics dashboard (pip-bundled)
 │   └── backends/
 │       ├── local_index.py       # Numpy cosine index
 │       ├── redis_backend.py     # Exact hash cache
@@ -214,6 +216,8 @@ ThriftLM/
 │       ├── cache.py             # /lookup, /store
 │       ├── metrics.py           # /metrics
 │       └── keys.py              # /keys
+├── docs/
+│   └── index.html               # Landing page (GitHub Pages + FastAPI /)
 ├── tests/                       # 66 passing tests
 ├── scratch/
 │   ├── smoke_test.py
@@ -239,6 +243,7 @@ POST /store     { "embedding": [...], "query": "...", "response": "...", "api_ke
 GET  /metrics   header: X-API-Key                                  → { hit_rate, tokens_saved, cost_saved, total_queries }
 POST /keys      { "email": "..." }                                 → { "api_key": "sc_..." }
 GET  /health                                                       → { "status": "ok" }
+GET  /                                                             → landing page (docs/index.html)
 ```
 
 ---
@@ -265,6 +270,7 @@ python scratch/qqp_benchmark.py
 - Presidio PII scrubbing on responses
 - Multi-tenant FastAPI + API key auth
 - `pip install thriftlm`
+- Landing page (`docs/`) + metrics dashboard (`thriftlm/static/`)
 
 **V2 — Agentic Plan Caching (next)**
 
