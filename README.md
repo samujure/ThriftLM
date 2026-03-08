@@ -8,6 +8,7 @@ Redis-fast exact hits. Numpy-powered near-miss matching. PII-scrubbed by default
 [![PyPI version](https://badge.fury.io/py/thriftlm.svg)](https://pypi.org/project/thriftlm/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docs](https://img.shields.io/badge/docs-thriftlm-pink.svg)](https://samujure.github.io/ThriftLM/)
 
 ```bash
 pip install thriftlm          # library only
