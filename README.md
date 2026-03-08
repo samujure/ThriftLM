@@ -17,7 +17,7 @@ pip install thriftlm
 
 ---
 
-## Why ThriftLM
+## Overview
 
 Every repeated or semantically similar LLM query burns tokens and adds latency. ThriftLM intercepts these calls with a three-tier cache — exact hash match in Redis, cosine similarity search in a local numpy index, and HNSW vector search in Supabase — before any request reaches your LLM provider.
 
