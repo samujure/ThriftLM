@@ -159,19 +159,18 @@ class TestSbertPass:
 
     def test_masks_implicit_identifier_room_number(self):
         """An implicit room/account number (high leave-one-out similarity) is masked."""
-        # "Patient in room 314 needs medication"
-        # 6 tokens → 6 candidates. Token "314" is at index 3.
-        tokens = ["Patient", "in", "room", "314", "needs", "medication"]
-        # Similarity when each token is removed:
-        # Only token 3 ("314") removal keeps sim >= 0.95.
-        sims = [0.60, 0.70, 0.65, 0.97, 0.55, 0.50]
+        # "Patient in room 3140 needs medication"
+        # Only "3140" (4+ digits) passes _looks_like_identifier → 1 candidate.
+        tokens = ["Patient", "in", "room", "3140", "needs", "medication"]
+        # One candidate sim: removal of "3140" yields sim >= 0.95 → redact.
+        sims = [0.97]
 
         scrubber = self._setup(tokens, sims)
         text = " ".join(tokens)
 
         result = scrubber._sbert_pass(text)
 
-        assert "314" not in result
+        assert "3140" not in result
         assert "[REDACTED]" in result
         # Content words should be preserved
         assert "Patient" in result
@@ -179,8 +178,9 @@ class TestSbertPass:
 
     def test_masks_account_reference(self):
         """An account reference code with high leave-one-out sim is masked."""
+        # "ACC-7891" is a hyphenated code → passes _looks_like_identifier → 1 candidate.
         tokens = ["Your", "account", "ACC-7891", "is", "active"]
-        sims = [0.80, 0.72, 0.96, 0.85, 0.78]
+        sims = [0.96]
 
         scrubber = self._setup(tokens, sims)
         result = scrubber._sbert_pass(" ".join(tokens))
@@ -209,17 +209,19 @@ class TestSbertPass:
 
     def test_batch_encode_called_once(self):
         """All candidates are encoded in exactly one model.encode() call."""
-        tokens = ["foo", "bar", "baz"]
-        sims = [0.50, 0.50, 0.50]
+        # Use tokens where only identifiers pass _looks_like_identifier:
+        # "X1234" (alphanumeric code) and "5678" (4+ digits) → 2 candidates.
+        tokens = ["Check", "X1234", "and", "5678"]
+        sims = [0.50, 0.50]  # one sim per candidate
         scrubber = self._setup(tokens, sims)
 
         scrubber._sbert_pass(" ".join(tokens))
 
-        # One encode call, with len(tokens)+1 texts.
+        # One encode call: full text + N leave-one-out candidates.
         mock_encode = scrubber._embedder._model.encode
         mock_encode.assert_called_once()
         texts_arg = mock_encode.call_args[0][0]
-        assert len(texts_arg) == len(tokens) + 1  # full text + N candidates
+        assert len(texts_arg) == 3  # full text + 2 candidates
 
 
 # ---------------------------------------------------------------------------
@@ -270,7 +272,8 @@ class TestOriginalResponseReturned:
         with patch("thriftlm.cache.Embedder") as MockEmb, \
              patch("thriftlm.cache.RedisBackend") as MockRedis, \
              patch("thriftlm.cache.SupabaseBackend") as MockSupa, \
-             patch("thriftlm.cache.PIIScrubber") as MockScrubber:
+             patch("thriftlm.cache.PIIScrubber") as MockScrubber, \
+             patch("thriftlm.backends.local_index.LocalEmbeddingIndex") as MockLocalIndex:
 
             mock_emb = MagicMock()
             mock_emb.embed.return_value = [0.1] * 384
@@ -281,8 +284,12 @@ class TestOriginalResponseReturned:
             MockRedis.return_value = mock_redis
 
             mock_supa = MagicMock()
-            mock_supa.lookup.return_value = None
+            mock_supa.store.return_value = "fake-row-id"
             MockSupa.return_value = mock_supa
+
+            mock_local_index = MagicMock()
+            mock_local_index.search.return_value = None
+            MockLocalIndex.return_value = mock_local_index
 
             # Scrubber transforms responses — strips names from output.
             mock_scrubber = MagicMock()
@@ -298,6 +305,7 @@ class TestOriginalResponseReturned:
             sc._redis = mock_redis
             sc._supabase = mock_supa
             sc._scrubber = mock_scrubber
+            sc._local_index = mock_local_index
             yield sc
 
     def test_original_response_returned_to_caller(self, monkeypatch):

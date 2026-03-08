@@ -35,7 +35,7 @@ query comes in
 
 ## How a Dev Uses It (3 lines)
 ```python
-from semantic_cache import SemanticCache
+from thriftlm import SemanticCache
 
 cache = SemanticCache(api_key="sc_xxx")
 response = cache.get_or_call(query, llm_fn=my_langchain_chain.invoke)
@@ -53,8 +53,8 @@ One env variable is the entire difference.
 
 ---
 
-## V1 Scope
-- [ ] pip-installable Python library (`semantic_cache/`)
+## V1 Scope (3 weeks, then done)
+- [ ] pip-installable Python library (`thriftlm/`)
 - [ ] FastAPI backend with API key auth
 - [ ] Supabase (pgvector) for vector storage, isolated namespace per API key
 - [ ] Upstash Redis for fast cache layer
@@ -84,21 +84,27 @@ One env variable is the entire difference.
 
 ## Repo Structure
 ```
-semanticCache/
-├── semantic_cache/              # pip package
+ThriftLM/
+├── thriftlm/                    # pip package
 │   ├── __init__.py
 │   ├── cache.py                 # SemanticCache class — core logic
 │   ├── embedder.py              # SBERT wrapper (all-MiniLM-L6-v2)
+│   ├── privacy.py               # PIIScrubber for PII detection/redaction
 │   ├── backends/
 │   │   ├── __init__.py
 │   │   ├── supabase_backend.py  # pgvector via Supabase
-│   │   └── redis_backend.py     # Upstash Redis
+│   │   ├── redis_backend.py     # Upstash Redis
+│   │   └── local_index.py       # in-process numpy similarity index
+│   ├── integrations/
+│   │   ├── __init__.py
+│   │   └── langgraph.py         # LangGraph native integration
 │   └── config.py                # threshold, TTL, env vars
 ├── api/                         # FastAPI backend
 │   ├── main.py
 │   ├── routes/
 │   │   ├── cache.py             # /lookup, /store endpoints
-│   │   └── metrics.py           # /metrics endpoint for dashboard
+│   │   ├── metrics.py           # /metrics endpoint for dashboard
+│   │   └── keys.py              # /keys endpoint
 │   ├── auth.py                  # API key validation
 │   └── db.py                    # Supabase client
 ├── dashboard/                   # Simple HTML/JS dashboard
@@ -106,7 +112,12 @@ semanticCache/
 ├── tests/
 │   ├── test_cache.py
 │   ├── test_embedder.py
-│   └── test_api.py
+│   ├── test_api.py
+│   ├── test_privacy.py
+│   ├── test_redis_backend.py
+│   └── test_supabase_backend.py
+├── supabase/
+│   └── setup.sql                # pgvector schema + RPC functions
 ├── docker-compose.yml           # self-host: Redis + API (Supabase is external)
 ├── pyproject.toml               # pip packaging
 ├── .env.example                 # SUPABASE_URL, SUPABASE_KEY, REDIS_URL, etc.
@@ -118,7 +129,7 @@ semanticCache/
 
 ## Key Classes
 
-### SemanticCache (semantic_cache/cache.py)
+### SemanticCache (thriftlm/cache.py)
 ```python
 class SemanticCache:
     def __init__(self, api_key: str, threshold: float = 0.85, ttl: int = 86400)
@@ -127,7 +138,7 @@ class SemanticCache:
     def store(self, query: str, response: str) -> None
 ```
 
-### Embedder (semantic_cache/embedder.py)
+### Embedder (thriftlm/embedder.py)
 ```python
 class Embedder:
     def __init__(self, model: str = "all-MiniLM-L6-v2")

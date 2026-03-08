@@ -38,7 +38,8 @@ def cache(monkeypatch):
     with patch("thriftlm.cache.Embedder") as MockEmbedder, \
          patch("thriftlm.cache.RedisBackend") as MockRedis, \
          patch("thriftlm.cache.SupabaseBackend") as MockSupabase, \
-         patch("thriftlm.cache.PIIScrubber") as MockScrubber:
+         patch("thriftlm.cache.PIIScrubber") as MockScrubber, \
+         patch("thriftlm.cache.LocalEmbeddingIndex") as MockLocalIndex:
 
         mock_embedder = MagicMock()
         mock_embedder.embed.return_value = FAKE_EMBEDDING
@@ -55,6 +56,10 @@ def cache(monkeypatch):
         mock_scrubber.scrub.side_effect = lambda text: text
         MockScrubber.return_value = mock_scrubber
 
+        mock_local_index = MagicMock()
+        mock_local_index.search.return_value = None  # default: no local hit
+        MockLocalIndex.return_value = mock_local_index
+
         from thriftlm.cache import SemanticCache
         sc = SemanticCache(api_key=FAKE_API_KEY)
 
@@ -63,6 +68,7 @@ def cache(monkeypatch):
         sc._redis = mock_redis
         sc._supabase = mock_supabase
         sc._scrubber = mock_scrubber
+        sc._local_index = mock_local_index
 
         yield sc
 
@@ -89,9 +95,10 @@ def test_cache_hit_redis(cache):
 # ---------------------------------------------------------------------------
 
 def test_cache_hit_supabase(cache):
-    """Supabase hit: llm_fn never called, response written back to Redis."""
+    """Local index hit → Supabase PK fetch: llm_fn never called, response promoted to Redis."""
     cache._redis.get.return_value = None
-    cache._supabase.lookup.return_value = FAKE_RESPONSE
+    cache._local_index.search.return_value = "fake-row-id"
+    cache._supabase.fetch_response_by_id.return_value = FAKE_RESPONSE
     llm_fn = MagicMock()
 
     result = cache.get_or_call(FAKE_QUERY, llm_fn)
@@ -108,7 +115,8 @@ def test_cache_hit_supabase(cache):
 def test_cache_miss(cache):
     """Both miss: llm_fn called once, response stored in both backends."""
     cache._redis.get.return_value = None
-    cache._supabase.lookup.return_value = None
+    cache._local_index.search.return_value = None
+    cache._supabase.store.return_value = "fake-row-id"
     llm_fn = MagicMock(return_value=FAKE_RESPONSE)
 
     result = cache.get_or_call(FAKE_QUERY, llm_fn)
@@ -127,6 +135,7 @@ def test_cache_miss(cache):
 
 def test_store_writes_both_backends(cache):
     """store() embeds the query and writes to both Supabase and Redis."""
+    cache._supabase.store.return_value = "fake-row-id"
     cache.store(FAKE_QUERY, FAKE_RESPONSE)
 
     cache._embedder.embed.assert_called_once_with(FAKE_QUERY)
@@ -161,9 +170,10 @@ def test_lookup_returns_redis_hit(cache):
 
 
 def test_lookup_supabase_hit_promotes_to_redis(cache):
-    """lookup() promotes a Supabase hit into Redis for the next call."""
+    """lookup() promotes a local index hit into Redis for the next call."""
     cache._redis.get.return_value = None
-    cache._supabase.lookup.return_value = FAKE_RESPONSE
+    cache._local_index.search.return_value = "fake-row-id"
+    cache._supabase.fetch_response_by_id.return_value = FAKE_RESPONSE
 
     result = cache.lookup(FAKE_QUERY)
 

@@ -49,6 +49,7 @@ Issues = "https://github.com/samujure/ThriftLM/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["thriftlm"]
+include = ["thriftlm/static/*.html"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

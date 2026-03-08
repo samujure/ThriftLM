@@ -22,4 +22,4 @@ class Config:
     api_key: str
     threshold: float = field(default_factory=lambda: float(os.getenv("SIMILARITY_THRESHOLD", "0.85")))
     ttl: int = field(default_factory=lambda: int(os.getenv("CACHE_TTL_SECONDS", "86400")))
-    base_url: str = field(default_factory=lambda: os.getenv("SEMANTIC_CACHE_URL", "https://api.semanticcache.dev"))
+    base_url: str = field(default_factory=lambda: os.getenv("THRIFTLM_URL", "https://api.thriftlm.dev"))

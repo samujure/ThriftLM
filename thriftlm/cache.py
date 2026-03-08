@@ -47,7 +47,7 @@ class SemanticCache:
             api_key=api_key,
             threshold=threshold,
             ttl=ttl,
-            base_url=base_url or os.getenv("SEMANTIC_CACHE_URL", "https://api.semanticcache.dev"),
+            base_url=base_url or os.getenv("THRIFTLM_URL", "https://api.thriftlm.dev"),
         )
 
         self._embedder = Embedder()

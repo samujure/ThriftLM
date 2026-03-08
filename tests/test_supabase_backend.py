@@ -61,7 +61,7 @@ def test_lookup_hit_returns_response():
     mock_client.table.return_value = mock_table
     mock_table.update.return_value = mock_table
     mock_table.eq.return_value = mock_table
-    mock_table.execute.return_value = MagicMock(data=[])
+    mock_table.execute.return_value = MagicMock(data=[{"id": "fake-uuid"}])
 
     backend = _make_backend(mock_client)
     result = backend.lookup(FAKE_EMBEDDING, FAKE_API_KEY)
@@ -84,7 +84,7 @@ def test_lookup_hit_updates_hit_count():
     mock_client.table.return_value = mock_table
     mock_table.update.return_value = mock_table
     mock_table.eq.return_value = mock_table
-    mock_table.execute.return_value = MagicMock(data=[])
+    mock_table.execute.return_value = MagicMock(data=[{"id": "fake-uuid"}])
 
     backend = _make_backend(mock_client)
     backend.lookup(FAKE_EMBEDDING, FAKE_API_KEY)
@@ -110,7 +110,7 @@ def test_lookup_hit_increments_total_hits_and_queries():
     mock_client.table.return_value = mock_table
     mock_table.update.return_value = mock_table
     mock_table.eq.return_value = mock_table
-    mock_table.execute.return_value = MagicMock(data=[])
+    mock_table.execute.return_value = MagicMock(data=[{"id": "fake-uuid"}])
 
     backend = _make_backend(mock_client)
     backend.lookup(FAKE_EMBEDDING, FAKE_API_KEY)
@@ -171,7 +171,7 @@ def test_store_inserts_correct_data():
     mock_table = MagicMock()
     mock_client.table.return_value = mock_table
     mock_table.insert.return_value = mock_table
-    mock_table.execute.return_value = MagicMock(data=[])
+    mock_table.execute.return_value = MagicMock(data=[{"id": "fake-uuid"}])
 
     backend = _make_backend(mock_client)
     backend.store(
@@ -202,7 +202,7 @@ def test_client_lazy_loaded_on_first_use():
         mock_table = MagicMock()
         mock_client.table.return_value = mock_table
         mock_table.insert.return_value = mock_table
-        mock_table.execute.return_value = MagicMock(data=[])
+        mock_table.execute.return_value = MagicMock(data=[{"id": "fake-uuid"}])
 
         backend = SupabaseBackend(FAKE_URL, FAKE_KEY)
         backend.store("q", "r", FAKE_EMBEDDING, FAKE_API_KEY)
