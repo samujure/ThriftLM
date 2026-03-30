@@ -101,22 +101,29 @@ class SupabaseBackend:
                 .execute()
             )
 
-            # Increment total_hits and total_queries for this API key.
+            # Increment total_hits, total_queries, and tokens_saved for this API key.
+            response_text = hit["response"]
+            tokens_delta = len(response_text) // 4
             (
                 client.rpc(
                     "increment_api_key_counters",
-                    {"target_api_key": api_key, "hits_delta": 1, "queries_delta": 1},
+                    {
+                        "target_api_key": api_key,
+                        "hits_delta": 1,
+                        "queries_delta": 1,
+                        "tokens_delta": tokens_delta,
+                    },
                 )
                 .execute()
             )
 
-            return hit["response"]
+            return response_text
 
         # MISS — increment total_queries only.
         (
             client.rpc(
                 "increment_api_key_counters",
-                {"target_api_key": api_key, "hits_delta": 0, "queries_delta": 1},
+                {"target_api_key": api_key, "hits_delta": 0, "queries_delta": 1, "tokens_delta": 0},
             )
             .execute()
         )
@@ -140,7 +147,7 @@ class SupabaseBackend:
 
         result = (
             client.table("cache_entries")
-            .select("response")
+            .select("response,hit_count")
             .eq("id", row_id)
             .single()
             .execute()
@@ -156,19 +163,46 @@ class SupabaseBackend:
         ).isoformat()
         (
             client.table("cache_entries")
-            .update({"last_hit_at": now})
+            .update({"last_hit_at": now, "hit_count": (row.get("hit_count") or 0) + 1})
             .eq("id", row_id)
             .execute()
         )
+        response_text = row["response"]
+        tokens_delta = len(response_text) // 4
         (
             client.rpc(
                 "increment_api_key_counters",
-                {"target_api_key": api_key, "hits_delta": 1, "queries_delta": 1},
+                {
+                    "target_api_key": api_key,
+                    "hits_delta": 1,
+                    "queries_delta": 1,
+                    "tokens_delta": tokens_delta,
+                },
             )
             .execute()
         )
 
-        return row["response"]
+        return response_text
+
+    def record_hit(self, api_key: str, response_text: str) -> None:
+        """Increment hit + query counters for a Redis cache hit."""
+        tokens_delta = len(response_text) // 4
+        self._get_client().rpc(
+            "increment_api_key_counters",
+            {
+                "target_api_key": api_key,
+                "hits_delta": 1,
+                "queries_delta": 1,
+                "tokens_delta": tokens_delta,
+            },
+        ).execute()
+
+    def record_miss(self, api_key: str) -> None:
+        """Increment query counter for a cache miss (before LLM call)."""
+        self._get_client().rpc(
+            "increment_api_key_counters",
+            {"target_api_key": api_key, "hits_delta": 0, "queries_delta": 1, "tokens_delta": 0},
+        ).execute()
 
     def store(self, query: str, response: str, embedding: list[float], api_key: str) -> str:
         """Insert a new cache entry and return its generated UUID.

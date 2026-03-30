@@ -51,7 +51,7 @@ def serve(api_key: str, port: int, host: str, no_browser: bool):
         pass
 
     url = f"http://localhost:{port}"
-    click.echo(f"ThriftLM dashboard → {url}")
+    click.echo(f"ThriftLM dashboard -> {url}")
     click.echo("Press Ctrl+C to stop.\n")
 
     if not no_browser:

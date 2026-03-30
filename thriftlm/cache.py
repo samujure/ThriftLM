@@ -91,9 +91,10 @@ class SemanticCache:
         """
         embedding = self._embedder.embed(query)
 
-        # 1. Redis fast-path
+        # 1. Redis fast-path (exact embedding match — sub-millisecond)
         cached = self._redis.get(embedding)
         if cached is not None:
+            self._supabase.record_hit(self.config.api_key, cached)
             return cached
 
         # 2. Local numpy index (microseconds) → Supabase PK fetch on hit
@@ -105,6 +106,7 @@ class SemanticCache:
                 return cached
 
         # 3. LLM fallback
+        self._supabase.record_miss(self.config.api_key)
         response = llm_fn(query)
         clean_response = self._scrubber.scrub(response)
         row_id = self._supabase.store(query, clean_response, embedding, self.config.api_key)

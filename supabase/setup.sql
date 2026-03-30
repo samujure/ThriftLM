@@ -77,18 +77,21 @@ $$;
 -- RPC: increment_api_key_counters
 -- Called by SupabaseBackend.lookup() to update hit/query counters atomically.
 -- hits_delta is 1 on a cache hit, 0 on a miss.
+-- tokens_delta is estimated tokens saved (len(response) // 4) on a hit, 0 on a miss.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION increment_api_key_counters(
     target_api_key text,
     hits_delta     integer,
-    queries_delta  integer
+    queries_delta  integer,
+    tokens_delta   integer DEFAULT 0
 )
 RETURNS void
 LANGUAGE sql
 AS $$
-    INSERT INTO api_keys (api_key, total_hits, total_queries)
-    VALUES (target_api_key, hits_delta, queries_delta)
+    INSERT INTO api_keys (api_key, total_hits, total_queries, tokens_saved)
+    VALUES (target_api_key, hits_delta, queries_delta, tokens_delta)
     ON CONFLICT (api_key) DO UPDATE
         SET total_hits    = api_keys.total_hits    + EXCLUDED.total_hits,
-            total_queries = api_keys.total_queries + EXCLUDED.total_queries;
+            total_queries = api_keys.total_queries + EXCLUDED.total_queries,
+            tokens_saved  = api_keys.tokens_saved  + EXCLUDED.tokens_saved;
 $$;

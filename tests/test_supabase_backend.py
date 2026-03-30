@@ -116,9 +116,10 @@ def test_lookup_hit_increments_total_hits_and_queries():
     backend.lookup(FAKE_EMBEDDING, FAKE_API_KEY)
 
     counter_call = mock_client.rpc.call_args_list[1]
+    expected_tokens = len(FAKE_RESPONSE) // 4
     assert counter_call == call(
         "increment_api_key_counters",
-        {"target_api_key": FAKE_API_KEY, "hits_delta": 1, "queries_delta": 1},
+        {"target_api_key": FAKE_API_KEY, "hits_delta": 1, "queries_delta": 1, "tokens_delta": expected_tokens},
     )
 
 
@@ -156,7 +157,7 @@ def test_lookup_miss_increments_total_queries_only():
     counter_call = mock_client.rpc.call_args_list[1]
     assert counter_call == call(
         "increment_api_key_counters",
-        {"target_api_key": FAKE_API_KEY, "hits_delta": 0, "queries_delta": 1},
+        {"target_api_key": FAKE_API_KEY, "hits_delta": 0, "queries_delta": 1, "tokens_delta": 0},
     )
 
 
