@@ -42,3 +42,6 @@ Thumbs.db
 
 # Docker
 *.override.yml
+
+# Office documents
+*.docx
