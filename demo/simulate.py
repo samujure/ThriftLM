@@ -29,6 +29,7 @@ except ImportError:
     RED = YELLOW = GREEN = BOLD = RESET = ""
 
 DIVIDER = "━" * 50
+API_KEY = "sc_demo"
 
 # ---------------------------------------------------------------------------
 # Query set — 15 queries, expected cache outcome annotated for dry-run
@@ -148,13 +149,29 @@ def run_real() -> None:
 # ---------------------------------------------------------------------------
 
 def run_dry() -> None:
-    print(f"\n  {YELLOW}{BOLD}DRY RUN — no API calls, latencies are simulated{RESET}\n")
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    import os
+    from thriftlm.backends.supabase_backend import SupabaseBackend
+
+    backend = SupabaseBackend(
+        supabase_url=os.environ["SUPABASE_URL"],
+        supabase_key=os.environ["SUPABASE_KEY"],
+    )
+    # Realistic cached response length for token estimation (~120 tokens)
+    FAKE_RESPONSE = "x" * 480
+
+    print(f"\n  {YELLOW}{BOLD}DRY RUN — LLM calls faked, metrics are real{RESET}\n")
     hits = 0
     for i, (user, query, expected) in enumerate(QUERIES, 1):
         elapsed_ms = fake_latency(expected)
         kind = expected
         if kind != "miss":
             hits += 1
+            backend.record_hit(API_KEY, FAKE_RESPONSE)
+        else:
+            backend.record_miss(API_KEY)
 
         print_query_block(user, query, kind, elapsed_ms, hits, i)
         time.sleep(0.8)

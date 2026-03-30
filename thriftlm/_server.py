@@ -16,26 +16,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 app = FastAPI(title="ThriftLM serve", docs_url=None, redoc_url=None)
 
-_DASHBOARD = Path(__file__).parent / "static" / "dashboard.html"
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 def _expected_key() -> str:
     return os.environ.get("THRIFTLM_SERVE_API_KEY", "")
-
-
-def _inject_meta(html: str, api_key: str, port: int) -> str:
-    """Inject <meta> tags so the dashboard auto-connects."""
-    host = os.environ.get("THRIFTLM_SERVE_HOST", "127.0.0.1")
-    api_url = f"http://localhost:{port}"
-    meta = (
-        f'<meta name="thriftlm-url" content="{api_url}">\n'
-        f'<meta name="thriftlm-key" content="{api_key}">\n'
-    )
-    return html.replace("</head>", meta + "</head>", 1)
 
 
 @app.get("/health")
@@ -45,13 +34,7 @@ async def health():
 
 @app.get("/")
 async def dashboard():
-    html = _DASHBOARD.read_text(encoding="utf-8")
-    key = _expected_key()
-    # Determine the port from the ASGI scope isn't trivial here;
-    # use env var set by the CLI instead.
-    port = int(os.environ.get("THRIFTLM_SERVE_PORT", "8000"))
-    html = _inject_meta(html, key, port)
-    return HTMLResponse(html)
+    return FileResponse(STATIC_DIR / "dashboard.html")
 
 
 @app.get("/metrics")
