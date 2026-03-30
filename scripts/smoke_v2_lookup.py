@@ -28,6 +28,7 @@ def main() -> None:
     parser.add_argument("--task", required=True)
     parser.add_argument("--context", default="{}", help="JSON string")
     parser.add_argument("--runtime-caps", default="{}", help="JSON string")
+    parser.add_argument("--timeout", type=float, default=30.0)
     args = parser.parse_args()
 
     try:
@@ -36,7 +37,7 @@ def main() -> None:
     except json.JSONDecodeError as exc:
         sys.exit(f"Error: invalid JSON argument — {exc}")
 
-    cache = ThriftLMPlanCache(api_key=args.api_key, base_url=args.base_url)
+    cache = ThriftLMPlanCache(api_key=args.api_key, base_url=args.base_url, timeout=args.timeout)
 
     try:
         result = cache.lookup(task=args.task, context=context, runtime_caps=runtime_caps)

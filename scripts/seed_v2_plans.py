@@ -20,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from thriftlm.embedder import Embedder
-from thriftlm.v2.intent import compute_bucket_hash
+from thriftlm.v2.intent import canonicalize, compute_bucket_hash
 from thriftlm.v2.schemas import IntentKey, PlanTemplate
 
 CANONICALIZER_VERSION = "v0.4"
@@ -176,9 +176,14 @@ def seed(api_key: str) -> None:
     created_at = datetime.now(timezone.utc).isoformat()
 
     for seed_def in _SEEDS:
-        intent_key: IntentKey = seed_def["intent_key"]  # type: ignore[assignment]
-        bucket_hash = compute_bucket_hash(intent_key)
         description = seed_def["description"]
+
+        canon_result = canonicalize(description)
+        if canon_result is None:
+            sys.exit(f"Error: canonicalize() returned None for seed {description!r}. Check OPENAI_API_KEY.")
+
+        intent_key: IntentKey = canon_result["intent_key"]  # type: ignore[assignment]
+        bucket_hash = canon_result["intent_bucket_hash"]
 
         # Skip if already seeded (same tenant + bucket + description)
         existing = (
