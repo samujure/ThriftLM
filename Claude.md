@@ -817,6 +817,13 @@ Rollout order: schema only → lookup scoring → extractor support → observat
 
 Do not start this until Phase 2 (extractor integration path + e2e tests + benchmark) is complete.
 
+### seed_v2_plans.py — seed_task vs description split (minor, post-0.2.0)
+Currently canonicalize() is called on the plan description string, which
+works but conflates two jobs: routing (what the canonicalizer needs) and
+reranking (what the embedder needs). Clean fix: add a "seed_task" field
+to each seed definition, canonicalize that for bucket routing, keep
+description purely for embedding similarity. Not a blocker for 0.2.0.
+
 ---
 
 ## Prior work context
