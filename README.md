@@ -12,8 +12,7 @@
 [![Docs](https://img.shields.io/badge/docs-thriftlm-pink.svg)](https://samujure.github.io/ThriftLM/)
 
 ```bash
-pip install thriftlm          # library + V1 cache
-pip install thriftlm[v2]     # + V2 server + Supabase backend + dashboard
+pip install thriftlm
 ```
 
 </div>
@@ -118,11 +117,7 @@ next similar task hits the plan cache
 ## Installation
 
 ```bash
-# V1 only — response caching, no server needed
 pip install thriftlm
-
-# V1 + V2 — plan caching, server, Supabase backend, dashboard
-pip install thriftlm[v2]
 ```
 
 **Prerequisites:**
@@ -306,7 +301,7 @@ thriftlm serve --api-key your-key
 # → http://localhost:8000  (opens automatically)
 ```
 
-Shows hit rate, tokens saved, estimated cost saved, and top cached queries. Reads directly from your Supabase. Requires `pip install thriftlm[v2]`.
+Shows hit rate, tokens saved, estimated cost saved, and top cached queries. Reads directly from your Supabase.
 
 ---
 
@@ -385,7 +380,7 @@ ThriftLM/
 ```bash
 git clone https://github.com/samujure/ThriftLM
 cd ThriftLM
-pip install -e ".[dev,api]"
+pip install -e ".[dev]"
 cp .env.example .env      # fill in SUPABASE_URL, SUPABASE_KEY, REDIS_URL, OPENAI_API_KEY
 docker compose up -d      # local Redis
 pytest tests/ -q          # 364 tests

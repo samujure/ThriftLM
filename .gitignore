@@ -53,3 +53,11 @@ debugged.txt
 
 # Scratch / dev experiments
 scratch/
+
+# Media / generated assets
+*.mp4
+*.png
+debugged.txt
+
+# Scratch / dev experiments
+scratch/

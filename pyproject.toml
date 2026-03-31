@@ -28,16 +28,14 @@ dependencies = [
   "httpx>=0.27.0",
   "click>=8.0.0",
   "typing_extensions>=4.5.0",
-]
-
-[project.optional-dependencies]
-v2 = [
   "fastapi>=0.111.0",
   "uvicorn[standard]>=0.30.0",
   "supabase>=2.4.0",
   "redis>=5.0.0",
   "pydantic[email]>=2.7.0",
 ]
+
+[project.optional-dependencies]
 dev = [
   "pytest>=8.0.0",
   "pytest-asyncio>=0.23.0",
