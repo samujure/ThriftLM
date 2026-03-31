@@ -54,6 +54,9 @@ debugged.txt
 # Scratch / dev experiments
 scratch/
 
+# Claude Code project instructions (local only)
+CLAUDE.md
+Claude.md
 # Media / generated assets
 *.mp4
 *.png
