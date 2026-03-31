@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "thriftlm"
-version = "0.2.0"
+version = "0.2.1"
 description = "Semantic caching layer for LLM applications — stop paying for the same call twice."
 readme = "README.md"
 license = { text = "MIT" }
