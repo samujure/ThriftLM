@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "thriftlm"
-version = "0.2.1"
-description = "Semantic caching layer for LLM applications — stop paying for the same call twice."
+version = "0.2.2"
+description = "Plan cache for agentic pipelines — reuse workflow skeletons, skip repeated planning."
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
@@ -33,6 +33,9 @@ dependencies = [
   "supabase>=2.4.0",
   "redis>=5.0.0",
   "pydantic[email]>=2.7.0",
+  "openai>=1.0.0",
+  "presidio-analyzer>=2.2.0",
+  "presidio-anonymizer>=2.2.0",
 ]
 
 [project.optional-dependencies]
@@ -46,7 +49,7 @@ dev = [
 thriftlm = "thriftlm.cli:cli"
 
 [project.urls]
-Homepage = "https://thriftlm.dev"
+Homepage = "https://github.com/samujure/ThriftLM"
 Repository = "https://github.com/samujure/ThriftLM"
 Issues = "https://github.com/samujure/ThriftLM/issues"
 
