@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-api = [
+v2 = [
   "fastapi>=0.111.0",
   "uvicorn[standard]>=0.30.0",
   "supabase>=2.4.0",

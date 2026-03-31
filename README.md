@@ -13,7 +13,7 @@
 
 ```bash
 pip install thriftlm          # library + V1 cache
-pip install thriftlm[api]     # + V2 server + Supabase backend + dashboard
+pip install thriftlm[v2]     # + V2 server + Supabase backend + dashboard
 ```
 
 </div>
@@ -122,7 +122,7 @@ next similar task hits the plan cache
 pip install thriftlm
 
 # V1 + V2 — plan caching, server, Supabase backend, dashboard
-pip install thriftlm[api]
+pip install thriftlm[v2]
 ```
 
 **Prerequisites:**
@@ -306,7 +306,7 @@ thriftlm serve --api-key your-key
 # → http://localhost:8000  (opens automatically)
 ```
 
-Shows hit rate, tokens saved, estimated cost saved, and top cached queries. Reads directly from your Supabase. Requires `pip install thriftlm[api]`.
+Shows hit rate, tokens saved, estimated cost saved, and top cached queries. Reads directly from your Supabase. Requires `pip install thriftlm[v2]`.
 
 ---
 
