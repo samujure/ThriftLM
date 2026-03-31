@@ -6,7 +6,7 @@
 
 `0.2.0` adds plan caching on top of response caching — repeated agent workflows now skip the planner entirely.
 
-[![PyPI version](https://badge.fury.io/py/thriftlm.svg)](https://pypi.org/project/thriftlm/)
+[![PyPI version](https://img.shields.io/pypi/v/thriftlm.svg)](https://pypi.org/project/thriftlm/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docs](https://img.shields.io/badge/docs-thriftlm-pink.svg)](https://samujure.github.io/ThriftLM/)
